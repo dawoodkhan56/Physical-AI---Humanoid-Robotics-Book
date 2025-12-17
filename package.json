@@ -1,0 +1,27 @@
+{
+  "name": "physical-ai---humanoid-robotics-book",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "npm run dev",
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "backend": "cd backend && python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000",
+    "frontend": "cd website && npm start",
+    "backend-dev": "cd backend && python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000",
+    "frontend-dev": "cd website && npm start",
+    "setup-backend": "cd backend && python -m venv venv && venv\\Scripts\\activate.bat && pip install -r requirements.txt",
+    "install": "cd website && npm install",
+    "build": "cd website && npm run build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=20.0"
+  }
+}

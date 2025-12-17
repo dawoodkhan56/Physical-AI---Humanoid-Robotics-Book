@@ -1,0 +1,314 @@
+# OpenAPI Contract: RAG Chatbot Backend API
+
+openapi: 3.0.3
+info:
+  title: Physical AI & Humanoid Robotics Book RAG API
+  description: API for Retrieval-Augmented Generation chatbot functionality for the Physical AI & Humanoid Robotics book
+  version: 1.0.0
+  contact:
+    name: Development Team
+    email: dev@physical-ai-book.com
+
+servers:
+  - url: https://api.physical-ai-book.com
+    description: Production server
+  - url: https://staging-api.physical-ai-book.com
+    description: Staging server
+  - url: http://localhost:8000
+    description: Development server
+
+paths:
+  /api/v1/query:
+    post:
+      summary: Submit a query to the RAG system
+      description: Submit a question to the RAG system and receive a response based on book content
+      operationId: submitQuery
+      tags:
+        - Query
+      security:
+        - api_key: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryRequest'
+            example:
+              question: "What is the control architecture for humanoid robots?"
+              selected_text: "In the hierarchical control approach, high-level planning..."
+              session_id: "session-12345"
+      responses:
+        '200':
+          description: Successfully processed query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResponse'
+              example:
+                answer: "The control architecture for humanoid robots typically involves a hierarchical system..."
+                sources: 
+                  - page_url: "/module-2/control-systems"
+                    title: "Control Systems in Humanoid Robotics"
+                    relevance_score: 0.95
+                session_id: "session-12345"
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/ingest:
+    post:
+      summary: Ingest book content into the RAG system
+      description: Process and store book content for retrieval by the RAG system
+      operationId: ingestContent
+      tags:
+        - Ingestion
+      security:
+        - api_key: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IngestionRequest'
+      responses:
+        '200':
+          description: Content successfully ingested
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestionResponse'
+        '400':
+          description: Bad request - invalid content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/health:
+    get:
+      summary: Check the health of the API
+      description: Verify that the RAG system is operational
+      operationId: healthCheck
+      tags:
+        - Health
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '500':
+          description: API is not healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+components:
+  schemas:
+    QueryRequest:
+      type: object
+      required:
+        - question
+      properties:
+        question:
+          type: string
+          description: The question to ask the RAG system
+          example: "How does inverse kinematics work in humanoid robots?"
+          minLength: 5
+          maxLength: 2000
+        selected_text:
+          type: string
+          description: Optional text selected by the user to provide context
+          example: "The inverse kinematics problem involves calculating joint angles..."
+          maxLength: 1000
+        session_id:
+          type: string
+          description: Optional session ID to maintain conversation history
+          example: "session-12345"
+          pattern: "^[a-zA-Z0-9-_]+$"
+
+    QueryResponse:
+      type: object
+      required:
+        - answer
+        - sources
+        - session_id
+      properties:
+        answer:
+          type: string
+          description: The answer to the user's question based on book content
+          example: "Inverse kinematics in humanoid robots involves calculating the joint angles required to position the end effector..."
+        sources:
+          type: array
+          description: List of sources used to generate the answer
+          items:
+            $ref: '#/components/schemas/Source'
+        session_id:
+          type: string
+          description: Session ID for maintaining conversation history
+          example: "session-12345"
+
+    Source:
+      type: object
+      required:
+        - page_url
+        - title
+        - relevance_score
+      properties:
+        page_url:
+          type: string
+          description: URL of the page containing the relevant information
+          example: "/module-2/kinematics"
+        title:
+          type: string
+          description: Title of the page
+          example: "Forward and Inverse Kinematics"
+        relevance_score:
+          type: number
+          description: Relevance score of this source to the question (0-1)
+          example: 0.95
+          minimum: 0
+          maximum: 1
+
+    IngestionRequest:
+      type: object
+      required:
+        - pages
+      properties:
+        pages:
+          type: array
+          description: Array of book pages to be ingested
+          items:
+            $ref: '#/components/schemas/BookPage'
+
+    BookPage:
+      type: object
+      required:
+        - id
+        - title
+        - module
+        - url
+        - content
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the page
+          example: "page-kinematics-001"
+        title:
+          type: string
+          description: Title of the page
+          example: "Forward and Inverse Kinematics"
+        module:
+          type: string
+          description: Module this page belongs to
+          example: "module-2"
+        week:
+          type: string
+          description: Week this page belongs to (optional)
+          example: "week-3"
+        url:
+          type: string
+          description: URL path for the page
+          example: "/module-2/kinematics"
+        content:
+          type: string
+          description: Full content of the page in markdown format
+          example: "# Forward and Inverse Kinematics\n\nIn robotics, forward kinematics is the use of..."
+
+    IngestionResponse:
+      type: object
+      required:
+        - status
+        - processed_count
+      properties:
+        status:
+          type: string
+          description: Status of the ingestion process
+          enum: [success, partial, error]
+          example: "success"
+        processed_count:
+          type: integer
+          description: Number of pages successfully processed
+          example: 5
+        errors:
+          type: array
+          description: List of errors that occurred during ingestion (if any)
+          items:
+            type: string
+            example: "Page 'page-kinematics-001' failed to process: invalid content format"
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Description of the error
+          example: "Rate limit exceeded. Please wait before submitting another query."
+        code:
+          type: string
+          description: Error code
+          example: "RATE_LIMIT_EXCEEDED"
+
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - timestamp
+      properties:
+        status:
+          type: string
+          description: Health status of the API
+          enum: [healthy, degraded, unhealthy]
+          example: "healthy"
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp of the health check
+          example: "2025-12-17T10:30:00Z"
+        details:
+          type: object
+          description: Additional health details
+          properties:
+            vector_db:
+              type: string
+              enum: [connected, disconnected]
+              example: "connected"
+            external_apis:
+              type: object
+              additionalProperties:
+                type: string
+                enum: [available, unavailable]
+              example:
+                openai: "available"
+
+  securitySchemes:
+    api_key:
+      type: apiKey
+      name: X-API-Key
+      in: header
+      description: API key for authentication and rate limiting
